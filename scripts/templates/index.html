@@ -1,0 +1,454 @@
+<!doctype html>
+<html>
+    <head>
+        
+        <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.css" />
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+  
+        <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
+        <script src="http://code.jquery.com/mobile/1.4.2/jquery.mobile-1.4.2.min.js"></script>
+
+        <style>
+		 #tabs-1, #tabs-3 {
+        height: 380px;
+		
+      }
+	html, body {
+  overflow: hidden;
+}
+    #frame {
+        -ms-zoom: 0.75;
+        -moz-transform: scale(0.75);
+        -moz-transform-origin: 0 0;
+        -o-transform: scale(0.75);
+        -o-transform-origin: 0 0;
+        -webkit-transform: scale(0.75);
+        -webkit-transform-origin: 0 0;
+    }
+            h3, h4 {text-align: center;}
+            span {font-weight: bold;}
+			readindoortemp {width: 20;}
+       
+	   
+        </style>
+
+        <script type=text/javascript>
+		
+		 
+		 $( function() {
+    $( "#tabs" ).tabs();
+  } );
+    $(
+    // When the LED button is pressed (change)
+    // do an ajax request to server to change LED state
+    function() 
+    {
+        $('#flip-1').change(function() 
+        {
+        $.getJSON('/_led', {state: $('#flip-1').val()});
+        }); 
+		$('#flip-2').change(function() 
+        {
+        $.getJSON('/_heatingonehour', {state: $('#flip-2').val()});
+        });   
+		$('#flip-3').change(function() 
+        {
+        $.getJSON('/_heatingconstant', {state: $('#flip-3').val()});
+        });   
+		$('#flip-4').change(function() 
+        {
+        $.getJSON('/_hotwater', {state: $('#flip-4').val()});
+        });   
+		$('#flip-5').change(function() 
+        {
+        $.getJSON('/_hotwateronehour', {state: $('#flip-5').val()});
+        });   
+		$('#flip-6').change(function() 
+        {
+        $.getJSON('/_hotwaterconstant', {state: $('#flip-6').val()});
+        }); 
+		$( '#heatingtempslider' ).on( 'slidestop', function() 
+        {
+        $.getJSON('/_setheatingtemp', {state: $('#heatingtempslider').val()});
+        });  
+		$( '#watertempslider' ).on( 'slidestop', function() 
+        {
+        $.getJSON('/_setwatertemp', {state: $('#watertempslider').val()});
+        }); 
+		$('#flip-7').change(function() 
+        {
+        $.getJSON('/_boileroverride', {state: $('#flip-7').val()});
+        });                
+    }
+    );
+
+    $(
+    // periodically (500ms) do an ajax request to get the button state
+    // modify the span tag to reflect the state (pressed or not)
+    // the state text comes from the JSON string returned by the server
+   function button() 
+    {
+    $.getJSON('/_button', function(data)
+        {
+            //Ben's line in order to change the slider's state
+            $('#flip-1').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+            $('#flip-1').slider('refresh');
+		
+			
+            $("#buttonState").text(data.buttonState);
+
+            // New line to update button state
+
+            setTimeout(function(){button();},2000);
+        });});
+	
+	$( function extrahourbutton() 
+    {
+    $.getJSON('/_extrahourbutton', function(data)
+        {
+            //Ben's line in order to change the slider's state
+            $('#flip-2').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+            $('#flip-2').slider('refresh');
+            $("#buttonState").text(data.buttonState);
+
+            // New line to update button state
+
+            setTimeout(function(){extrahourbutton();},500);
+        });
+    
+	
+	}
+    );
+	$( function heatingconstantbutton() 
+    {
+    $.getJSON('/_heatingconstantbutton', function(data)
+        {
+            //Ben's line in order to change the slider's state
+            $('#flip-3').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+            $('#flip-3').slider('refresh');
+            $("#buttonState").text(data.buttonState);
+
+            // New line to update button state
+
+            setTimeout(function(){heatingconstantbutton();},500);
+        });
+    
+	
+	}
+    );
+	
+	$( function hotwaterbutton() 
+    {
+    $.getJSON('/_hotwaterbutton', function(data)
+        {
+            //Ben's line in order to change the slider's state
+            $('#flip-4').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+            $('#flip-4').slider('refresh');
+            $("#buttonState").text(data.buttonState);
+
+            // New line to update button state
+
+            setTimeout(function(){hotwaterbutton();},500);
+        });
+    
+	
+	}
+    );$( function hotwaterextrahourbutton() 
+    {
+    $.getJSON('/_hotwaterextrahourbutton', function(data)
+        {
+			
+            //Ben's line in order to change the slider's state
+            $('#flip-5').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+			
+            $("#buttonState").text(data.buttonState);
+ 
+            $('#flip-5').slider('refresh'); 
+            // New line to update button state
+
+            setTimeout(function(){hotwaterextrahourbutton();},500);
+        });
+    
+	
+	}
+    );
+	
+	
+	$( function hotwaterconstantbutton() 
+    {
+    $.getJSON('/_hotwaterconstantbutton', function(data)
+        {
+            //Ben's line in order to change the slider's state
+            $('#flip-6').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+            $('#flip-6').slider('refresh');
+            $("#buttonState").text(data.buttonState);
+
+            // New line to update button state
+
+            setTimeout(function(){hotwaterconstantbutton();},500);
+        });
+    
+	
+	}
+    );
+	
+	$(document).one('ready', function () {
+   $(function button() 
+      
+    {
+    $.getJSON('/_setheatingtempslider', function(data)
+        {
+            //Ben's line in order to change the slider's state
+            $('#heatingtempslider').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+            $('#heatingtempslider').slider('refresh');
+            $("#buttonState").text(data.buttonState);
+             
+            // New line to update button state
+
+            
+        });
+    });}
+	
+    );
+	$(document).one('ready', function () {
+   $(function button() 
+      
+    {
+    $.getJSON('/_setwatertempslider', function(data)
+        {
+            //Ben's line in order to change the slider's state
+            $('#watertempslider').val(data.buttonState);
+            //The new line that makes the slider work depending on the state's value
+            $('#watertempslider').slider('refresh');
+            $("#buttonState").text(data.buttonState);
+             
+            // New line to update button state
+
+            
+        });
+    });}
+    
+	);
+	$( function readindoortemp() 
+    {
+    $.getJSON('/_readindoortemp', function(data)
+        {
+            $('#readindoortemp').html(data.readindoortemp);
+			setTimeout(function(){readindoortemp();},500);
+        });
+    
+	
+	}
+    );
+	$( function readoutdoortemp() 
+    {
+    $.getJSON('/_readoutdoortemp', function(data)
+        {
+            $('#readoutdoortemp').html(data.readoutdoortemp);
+			setTimeout(function(){readoutdoortemp();},500);
+        });
+    
+	
+	}
+    );
+	$( function readboilertemp() 
+    {
+    $.getJSON('/_readboilertemp', function(data)
+        {
+            $('#readboilertemp').html(data.readboilertemp);
+			setTimeout(function(){readboilertemp();},500);
+        });
+    
+	
+	}
+    );
+	$( function boilerstatus() 
+    {
+    $.getJSON('/_boilerstatus', function(data)
+        {
+            $('#boilerstatus').html(data.boilerstatus);
+			setTimeout(function(){boilerstatus();},500);
+        });});
+	$( function solarstatus() 
+    {
+    $.getJSON('/_solarstatus', function(data)
+        {
+            $('#solarstatus').html(data.solarstatus);
+			setTimeout(function(){solarstatus();},500);
+        });});
+	$( function readsolarkwh() 
+    {
+    $.getJSON('/_readsolarkwh', function(data)
+        {
+            $('#readsolarkwh').html(data.readsolarkwh);
+			setTimeout(function(){readsolarkwh();},500);
+        });});	
+	$( function heatingscheduleindicator() 
+    {
+    $.getJSON('/_heatingscheduleindicator', function(data)
+        {
+            $('#heatingscheduleindicator').html(data.heatingscheduleindicator);
+			setTimeout(function(){heatingscheduleindicator();},500);
+        });});	
+	$( function waterscheduleindicator() 
+    {
+    $.getJSON('/_waterscheduleindicator', function(data)
+        {
+            $('#waterscheduleindicator').html(data.waterscheduleindicator);
+			setTimeout(function(){waterscheduleindicator();},500);
+        });});	
+$( function boilertemprate() 
+    {
+    $.getJSON('/_boilertemprate', function(data)
+        {
+            $('#boilertemprate').html(data.boilertemprate);
+			setTimeout(function(){boilertemprate();},500);
+        });});	
+		
+		
+</script>
+
+    </head>
+
+    <body>
+  
+<div id="tabs">
+  <ul>
+    <li><a href="#tabs-1">Heating/Water Control</a></li>
+   <li><a href="#tabs-2">Heating/Water Schedule</a></li>
+  
+  </ul><div id="tabs-1">
+    
+          
+
+    <div align="left" >
+      <table width="200" border="1" align="left">
+              <tr>
+                <td colspan="2"><div align="center">Water
+                </div>                  <div align="center"></div></td>
+              </tr>
+              <tr>
+                <td colspan="2"><div align="center"><select name="flip-4" id="flip-4" data-role="slider" style="float: left;">
+                  <option value="disarmed">Off</option>
+                  <option value="armed">On</option>
+                </select>                  
+              </div><div id = "waterscheduleindicator" align="center"></div></td>
+              </tr>
+              <tr>
+                <td width="200">Extra Hour</td>
+                <td width="102"><select name="flip-5" id="flip-5" data-role="slider" style="float: left;">
+                  <option value="disarmed">Off</option>
+                  <option value="armed">On</option>
+                </select></td>
+            </tr>
+              <tr>
+                <td>Constant</td>
+                <td><select name="flip-6" id="flip-6" data-role="slider" style="float: left;">
+                  <option value="disarmed">Off</option>
+                  <option value="armed">On</option>
+                </select></td>
+            </tr>
+              <tr>
+                <td colspan="2"><label for="slider">Desired Temp (C°):</label>
+   <input type="range" name="watertempslider" id="watertempslider"  min="30" max="65"  />            </td>
+              </tr>
+      </table><table width="310" border="1" align="left" >
+              <tr>
+                <td>Actual Indoor Temp:</td>
+                <td width="23"></td>
+                <td width="52"><div id = "readindoortemp"></div></td>
+                <td width="31">C°</td>
+              </tr>
+              <tr>
+                <td>Actual Outdoor Temp:</td>
+                <td>&nbsp;</td>
+                <td><div id = "readoutdoortemp"></div></td>
+                <td>C°</td>
+              </tr>
+              <tr>
+                <td>Actual Boiler Temp:</td>
+                <td><div id = "boilertemprate" align="center"></div></td>
+                <td><div id = "readboilertemp"></div></td>
+                <td>C°</td>
+              </tr>
+              <tr>
+                <td colspan="2">Solar Energy Today:</td>
+                <td><div id = "readsolarkwh"></div></td>
+                <td>kWh</td>
+              </tr>
+              <tr>
+                <td colspan="4"><div align="center"><br>Save energy by using solar panel over boiler when possible <br> <select name="flip-7" id="flip-7" data-role="slider" style="float: left;">
+                  <option value="disarmed">Off</option>
+                  <option value="armed">On</option>
+                </select>                  
+              </div></td>
+              </tr>
+              <tr>
+                <td width="176" height="55"><div id = "boilerstatus" align="center" ></div></td>
+                <td colspan="3"><div id = "solarstatus" align="center"></div></td>
+              </tr>
+              
+            </table>
+            <table width="200" border="1">
+          <tr>
+            <td colspan="2"><div align="center">Heating</div></td>
+            </tr>
+          <tr>
+            <td colspan="2"><div align="center"><form>
+              <select name="flip-1" id="flip-1" data-role="slider" style="float: left;" >
+                  <option value="disarmed">Off</option>
+                  <option value="armed">On</option>
+                </select></form>
+              </div><div id = "heatingscheduleindicator" align="center"></div>
+              
+           
+            </td>
+            </tr>
+          <tr>
+            <td> <p>Extra Hour</p></td>
+            <td><form> 
+           
+            <select name="flip-2" id="flip-2" data-role="slider" style="float: left;">
+                <option value="disarmed">Off</option>
+                <option value="armed">On</option>
+            </select>
+            </form></td>
+          </tr>
+          <tr>
+            <td>Constant</td>
+            <td><form> 
+           
+            <select name="flip-3" id="flip-3" data-role="slider" style="float: left;">
+                <option value="disarmed">Off</option>
+                <option value="armed">On</option>
+            </select>
+            </form></td>
+          </tr>
+          <tr>
+            <td height="49" colspan="2"><label for="slider">Desired Temp (C°):</label>
+   <input type="range" name="heatingtempslider" id="heatingtempslider"  min="12" max="23"  />            </td>
+            </tr>
+         
+      </table>
+            
+<br>
+
+            
+            
+          
+      
+    </div>
+       </div>
+    <div id="tabs-2"><iframe src="https://calendar.google.com/calendar/embed?showTitle=0&amp;showPrint=0&amp;showTabs=0&amp;showCalendars=0&amp;showTz=0&amp;mode=AGENDA&amp;height=600&amp;wkst=1&amp;bgcolor=%23FFFFFF&amp;src=f5g1k52vedethpcho9qrq5nglc%40group.calendar.google.com&amp;color=%23711616&amp;src=p%23weather%40group.v.calendar.google.com&amp;color=%232F6309&amp;ctz=Europe%2FLondon" style="border-width:0" width="700" height="400" frameborder="0" scrolling="no"></iframe></div>
+    </div>
+    
+    </body>
+
+</html>
