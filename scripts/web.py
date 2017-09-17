@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, jsonify
 import RPi.GPIO as GPIO
 import time
@@ -49,7 +50,7 @@ def database(figures):
 		daily_kwh = row3
 	for row4 in curs.execute("SELECT heating_schedule, hotwater_schedule FROM control WHERE rowid=1"):
 		schedule = row4
-	figures = latest[2],latest[3],latest[4],latest[10],latest[11],avg[0],daily_kwh[0],schedule[0],schedule[1]
+	figures = latest[2],latest[3],latest[4],latest[11],latest[12],avg[0],daily_kwh[0],schedule[0],schedule[1]
 		
 		
 	conn.close()
@@ -72,23 +73,13 @@ def _led():
         heating_onehour = row[2]
     conn.close()
     if state=="armed":
-        heating_on = 1
- #       fo = open("/home/pi/switches/heating_switch_on", "wb")
- 
-        
+        heating_on = 1   
     elif state=="disarmed":
         heating_on = 0
- 
-#        os.remove("/home/pi/switches/heating_switch_on")
-#        if os.path.isfile("/home/pi/switches/heating_constant") == True:
         if heating_constant == 1:
             heating_constant = 0
-#            os.remove("/home/pi/switches/heating_constant")
-#        elif os.path.isfile("/home/pi/switches/heating_extrahour") == True:
-#            os.remove("/home/pi/switches/heating_extrahour")
         elif heating_onehour == 1:
-            heating_onehour = 0
-    
+            heating_onehour = 0 
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
     curs.execute("UPDATE control SET heating_on = ?, heating_constant = ?, heating_onehour = ? WHERE rowid = ?", (heating_on, heating_onehour, heating_constant, 1))
@@ -105,7 +96,6 @@ def _button():
     curs=conn.cursor()
     for row in curs.execute("SELECT heating_on, heating_constant, heating_onehour FROM control WHERE rowid=1"):
         if row[0] == 1:
-#         if os.path.isfile("/home/pi/switches/heating_switch_on") == True:
             state = "armed"
         else:
             state = "disarmed"
@@ -127,22 +117,11 @@ def _heatingonehour():
             heating_on = 1
             heating_onehour = 1
             if heating_schedule == 0:
-			
-#        if os.path.isfile("/home/pi/switches/heating_constant") == False:
-#             fo = open("/home/pi/switches/heating_switch_on", "wb")
-#             fo = open("/home/pi/switches/heating_extrahour", "wb")    
-#             if os.path.isfile("/home/pi/schedule/heating_schedule_on") == False:
-                os.system("gcalcli --calendar 'central heating' --title 'Heating extra hour set' --when '" + var + "' --where '.' --duration '60' --description 'end: /usr/bin/python /home/pi/scripts/heating_schedule.py extrahouroff' --reminder '1' add")
-        
-        
+                os.system("gcalcli --calendar 'central heating' --title 'Heating extra hour set' --when '" + var + "' --where '.' --duration '60' --description 'end: /usr/bin/python /home/pi/scripts/heating_schedule.py extrahouroff' --reminder '1' add")    
     elif state=="disarmed":
         heating_onehour = 0		
         if heating_schedule == 0:
             heating_on = 0
-#        if os.path.isfile("/home/pi/switches/heating_extrahour") == True:
-#            os.remove("/home/pi/switches/heating_extrahour")
-#            if os.path.isfile("/home/pi/schedule/heating_schedule_on") == False:
-#                os.remove("/home/pi/switches/heating_switch_on")	
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
     curs.execute("UPDATE control SET heating_on = ?, heating_onehour = ? WHERE rowid = ?", (heating_on, heating_onehour, 1))
@@ -167,16 +146,10 @@ def _heatingconstant():
         heating_constant = 1
         if heating_onehour == 1:
 		    heating_onehour = 0
-#         fo = open("/home/pi/switches/heating_constant", "wb")
- #        if os.path.isfile("/home/pi/switches/heating_extrahour") == True:
-#             os.remove("/home/pi/switches/heating_extrahour")
     elif state=="disarmed":
         heating_constant = 0
         if heating_schedule == 0 and heating_onehour == 0:
             heating_on = 0
-#         os.remove("/home/pi/switches/heating_constant")
-#         if os.path.isfile("/home/pi/schedule/heating_schedule_on") == False and os.path.isfile("/home/pi/switches/heating_extrahour") == False:
-# 		os.remove("/home/pi/switches/heating_switch_on")
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
     curs.execute("UPDATE control SET heating_constant = ?, heating_on = ?, heating_onehour = ? WHERE rowid = ?", (heating_constant, heating_on, heating_onehour, 1))
@@ -189,9 +162,6 @@ def _heatingconstant():
 @app.route("/_setheatingtemp")
 def _setheatingtemp():
     state = request.args.get('state')
-#    f = open('/home/pi/switches/set_heating_temp', "w")
-#    f.write(state)
-#    f.close()
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
     curs.execute("UPDATE control SET heating_temp_set = ? WHERE rowid = ?", (state, 1))
@@ -215,18 +185,11 @@ def _extrahourbutton():
     curs=conn.cursor()
     for row in curs.execute("SELECT heating_on, heating_constant, heating_onehour FROM control WHERE rowid=1"):
         if row[2] == 1:
-#         if os.path.isfile("/home/pi/switches/heating_switch_on") == True:
             state = "armed"
         else:
             state = "disarmed"
     conn.close()
     return jsonify(buttonState=state)
-	
-#    if os.path.isfile("/home/pi/switches/heating_extrahour") == True:
-#        state = "armed"
-#    else:
-#        state = "disarmed"
-#    return jsonify(buttonState=state)
 
 # ajax GET call this function periodically to read button state
 # the state is sent back as json data
@@ -236,22 +199,13 @@ def _heatingconstantbutton():
     curs=conn.cursor()
     for row in curs.execute("SELECT heating_constant FROM control WHERE rowid=1"):
         if row[0] == 1:	
- #       if os.path.isfile("/home/pi/switches/heating_constant") == True:
             state = "armed"
         else:
             state = "disarmed"
     conn.close()
     return jsonify(buttonState=state)
 
-# set heating temp slider state
-@app.route("/_setheatingtempslider")
-def _setheatingtempslider():
-    conn=sqlite3.connect(dbname)
-    curs=conn.cursor()
-    for row in curs.execute("SELECT heating_temp_set FROM control WHERE rowid=1"):
-        state = row[0]
-        		
-    return jsonify(buttonState=state)	
+
 	
 
 # ajax GET call this function to set water relay state
@@ -268,21 +222,12 @@ def _hotwater():
     conn.close()
     if state=="armed":
         hotwater_on = 1
-#        fo = open("/home/pi/switches/hotwater_switch_on", "wb")
-       	
-        
     elif state=="disarmed":
         hotwater_on = 0
         if hotwater_constant == 1:
             hotwater_constant = 0
         elif hotwater_onehour == 1:
             hotwater_onehour = 0		
-#        os.remove("/home/pi/switches/hotwater_switch_on")
-#        if os.path.isfile("/home/pi/switches/hotwater_constant") == True:
-#            os.remove("/home/pi/switches/hotwater_constant")
-#        elif os.path.isfile("/home/pi/switches/hotwater_extrahour") == True:
-#            os.remove("/home/pi/switches/hotwater_extrahour")
-    
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
     curs.execute("UPDATE control SET hotwater_on = ?, hotwater_constant = ?, hotwater_onehour = ? WHERE rowid = ?", (hotwater_on, hotwater_constant, hotwater_onehour, 1))
@@ -306,9 +251,7 @@ def _hotwateronehour():
             hotwater_on = 1
             hotwater_onehour = 1
             if hotwater_schedule == 0:
-                os.system("gcalcli --calendar 'central heating' --title 'Hotwater extra hour set' --when '" + var + "' --where '.' --duration '60' --description 'end: /usr/bin/python /home/pi/scripts/hotwater_schedule.py extrahouroff' --reminder '1' add")
-        
-        
+                os.system("gcalcli --calendar 'central heating' --title 'Hotwater extra hour set' --when '" + var + "' --where '.' --duration '60' --description 'end: /usr/bin/python /home/pi/scripts/hotwater_schedule.py extrahouroff' --reminder '1' add")      
     elif state=="disarmed":
         hotwater_onehour = 0		
         if hotwater_schedule == 0:
@@ -353,9 +296,6 @@ def _hotwaterconstant():
 @app.route("/_setwatertemp")
 def _setwatertemp():
     state = request.args.get('state')
-    f = open('/home/pi/switches/set_hotwater_temp', "w")
-    f.write(state)
-    f.close()
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
     curs.execute("UPDATE control SET hotwater_temp_set = ? WHERE rowid = ?", (state, 1))
@@ -364,7 +304,16 @@ def _setwatertemp():
     os.system("python /home/pi/scripts/control.py")
     return ""	
 	
-	
+@app.route("/_setwatertempmax")
+def _setwatertempmax():
+    state = request.args.get('state')
+    conn=sqlite3.connect(dbname)
+    curs=conn.cursor()
+    curs.execute("UPDATE control SET hotwater_temp_set_max = ? WHERE rowid = ?", (state, 1))
+    conn.commit()
+    conn.close()
+    os.system("python /home/pi/scripts/control.py")
+    return ""		
 
 # ajax GET call this function periodically to read button state
 # the state is sent back as json data
@@ -411,15 +360,16 @@ def _hotwaterconstantbutton():
     return jsonify(buttonState=state)
 
 	# read water temp slider
-@app.route("/_setwatertempslider")
-def _setwatertempslider():
+@app.route("/_setslider")
+def _setslider():
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
-    for row in curs.execute("SELECT hotwater_temp_set FROM control WHERE rowid=1"):
+    for row in curs.execute("SELECT hotwater_temp_set, hotwater_temp_set_max, heating_temp_set FROM control WHERE rowid=1"):
         state = row[0]
-        		
-    return jsonify(buttonState=state)	
-	
+        state1 = row[1]
+        state2 = row[2]
+    conn.close()    		
+    return jsonify(buttonState=state, buttonState1=state1, buttonState2=state2)	
 	
 
 @app.route("/_boileroverride")
@@ -427,12 +377,8 @@ def _boileroverride():
     state = request.args.get('state')
     if state=="armed":
         boiler_override = 1	
-#        fo = open("/home/pi/switches/boiler_override", "wb")
-	
-        
     elif state=="disarmed":
         boiler_override = 0
-#        os.remove("/home/pi/switches/boiler_override")
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
     curs.execute("UPDATE control SET boiler_override = ? WHERE rowid = ?", (boiler_override, 1))
@@ -460,30 +406,28 @@ def _boileroverridebutton():
 ###########################################SENSORS/EXTERNAL################################################	
 	
 # read indoor temperature
-@app.route("/_readindoortemp")
-def _readindoortemp():
-    readindoortemp = database(figures)[1]
-        		
-    return jsonify(readindoortemp=readindoortemp)	
+@app.route("/_readtemp")
+def _readtemp():
+    if database(figures)[1] < 14:
+        readindoortemp = """
+        <font color = "blue">%s</font>
+        """ %(database(figures)[1])
+    else:
+        readindoortemp = database(figures)[1]
+    if database(figures)[0] < 14:
+            readoutdoortemp = """
+        <font color = "blue">%s</font>
+        """ %(database(figures)[0])
+    else: 
+        readoutdoortemp = database(figures)[0] 
+    if database(figures)[2] < 35:
+        readboilertemp = """
+        <font color = "blue">%s</font>
+        """ %(database(figures)[2])
+    else:
+        readboilertemp = database(figures)[2]	
+    return jsonify(readindoortemp=readindoortemp, readoutdoortemp=readoutdoortemp, readboilertemp=readboilertemp)	
 	
-# read outdoor temperature
-@app.route("/_readoutdoortemp")
-def _readoutdoortemp():
-    readoutdoortemp = database(figures)[0]
-        		
-    return jsonify(readoutdoortemp=readoutdoortemp)
-
-# read boiler temperature
-@app.route("/_readboilertemp")
-def _readboilertemp():
-	
-	if database(figures)[2] < 35:
-		readboilertemp = """
-		<font color = "blue">%s</font>
-		""" %(database(figures)[2])
-	else:
-		readboilertemp = database(figures)[2]   		
-	return jsonify(readboilertemp=readboilertemp)	
 
 # read solar kwh
 @app.route("/_readsolarkwh")
@@ -495,9 +439,9 @@ def _readsolarkwh():
 # boiler temp increasing/decreasing
 @app.route("/_boilertemprate")
 def _boilertemprate():
-	if database(figures)[5]/6 >= database(figures)[2]+0.5: 
+	if database(figures)[5]/6 >= database(figures)[2]+0.2: 
 		boilertemprate='<img src="/static/down_arrow.png" width="20" height="20" />'
-	elif database(figures)[5]/6 <= database(figures)[2]-0.5:
+	elif database(figures)[5]/6 <= database(figures)[2]-0.2:
 		boilertemprate='<img src="/static/up_arrow.png" width="20" height="20" />'
 	else:
 		boilertemprate='--'
