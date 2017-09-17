@@ -15,6 +15,17 @@ GPIO.setup(HOTWATER_RELAY_PIN, GPIO.OUT)
 
 dbname='/home/pi/database/centralheating.db'
 
+# connection to db. select values from db and hand over variables. 
+conn=sqlite3.connect(dbname)
+curs=conn.cursor()
+for row0 in curs.execute("SELECT * FROM control WHERE rowid=1"):
+	heatingset = row0[4]
+	hotwaterset = row0[9]
+	hotwatersetmax = row0[10]
+	heating_on = row0[0]
+	hotwater_on = row0[5]
+conn.close()
+
 temp = 0
 switch_state = 0
 relay_state = 0
@@ -26,9 +37,29 @@ solar_pump_running = 0
 solar_pump_hrs = 0
 solar_kwh = 0
 empty = 0
-# get boiler temp
+# get boiler temp avg from tank sensors
 def boilertemp(temp):	
 	tfile = open("/sys/bus/w1/devices/28-011564c4c5ff/w1_slave") 
+	text = tfile.read() 
+	tfile.close()
+	secondline = text.split("\n")[1] 
+	temperaturedata = secondline.split(" ")[9]
+	temperature = float(temperaturedata[2:])
+	temp0 = temperature / 1000
+	print temp0
+	tfile = open("/sys/bus/w1/devices/28-0115649c2fff/w1_slave") 
+	text = tfile.read() 
+	tfile.close()
+	secondline = text.split("\n")[1] 
+	temperaturedata = secondline.split(" ")[9]
+	temperature = float(temperaturedata[2:])
+	temp1 = temperature / 1000
+	print temp1
+	temp = round((temp0 + temp1) /2, 2)
+	return (float(temp))
+	
+def boilertemp_tanktop(temp):	
+	tfile2 = open("/sys/bus/w1/devices/28-0115649c2fff/w1_slave") 
 	text = tfile.read() 
 	tfile.close()
 	secondline = text.split("\n")[1] 
@@ -49,38 +80,6 @@ def indoortemp(temp):
 	text = data.read()
 	temp = text
 	return (float(temp))	
-	
-# heating set temp?
-
-def heatingset(temp):
-	with open('/home/pi/switches/set_heating_temp') as f:
-		temp = f.read()
-	return (float(temp))
-
-# hot water set temp?
-
-def hotwaterset(temp):
-	with open('/home/pi/switches/set_hotwater_temp') as f:
-		temp = f.read()
-	return (float(temp))	
-	
-# is heating turned on?
-
-def heating_on(switch_state):
-	if os.path.isfile("/home/pi/switches/heating_switch_on") == True:
-		switch_state = 1
-	else:
-		switch_state = 0
-	return (switch_state)
-
-# is hot water turned on?
-
-def hotwater_on(switch_state):
-	if os.path.isfile("/home/pi/switches/hotwater_switch_on") == True:
-		switch_state = 1
-	else:
-		switch_state = 0
-	return (switch_state)
 
 # is boiler relay closed?
 
@@ -92,8 +91,6 @@ def boiler_relay(relay_state):
 	return (relay_state)
 
 # is solar pump running?
-
-
 	
 def process_solar(solar_data):
 	tmp = ""
@@ -119,7 +116,7 @@ def process_solar(solar_data):
 print boiler_relay(relay_state)
 
 
-solar_time, solar_tank_temp, solar_collector_temp, solar_pump_running, solar_pump_hrs, solar_kwh, empty = process_solar(solar_data).split(',')
+solar_time, solar_collector_temp, solar_tank_temp, solar_pump_running, solar_pump_hrs, solar_kwh, empty = process_solar(solar_data).split(',')
 
 
 
@@ -127,31 +124,13 @@ solar_time, solar_tank_temp, solar_collector_temp, solar_pump_running, solar_pum
 conn=sqlite3.connect(dbname)
 curs=conn.cursor()
 
-curs.execute("INSERT INTO temps(tdate, ttime, outdoortemp, indoortemp, boilertemp, hotwater_set_temp, heating_set_temp, heating_on, hotwater_on, boiler_relay, solar_pump_running, solar_kwh) values(date('now','localtime'), time('now','localtime'), ?, ?, ?, ?, ?, ?, ? ,? ,? ,?)", (outdoortemp(temp), indoortemp(temp), boilertemp(temp), hotwaterset(temp), heatingset(temp), heating_on(switch_state), hotwater_on(switch_state), boiler_relay(relay_state), solar_pump_running, solar_kwh))
+curs.execute("INSERT INTO temps(tdate, ttime, outdoortemp, indoortemp, boilertemp, hotwater_set_temp, hotwater_set_temp_max, heating_set_temp, heating_on, hotwater_on, boiler_relay, solar_pump_running, solar_kwh, solar_tank_temp, solar_collector_temp, solar_pump_hrs) values(date('now','localtime'), time('now','localtime'), ?, ?, ?, ?, ?, ?, ?, ? ,? ,? ,? ,? ,? ,?)", (outdoortemp(temp), indoortemp(temp), boilertemp(temp), hotwaterset, hotwatersetmax, heatingset, heating_on, hotwater_on, boiler_relay(relay_state), solar_pump_running, solar_kwh, solar_tank_temp, solar_collector_temp, solar_pump_hrs))
 
     # commit the changes
 conn.commit()
 
 conn.close()
 
-
-# write files to sd
-
-f = open('/home/pi/sensors/solar_boiler_temp', 'w')
-a = open('/home/pi/sensors/solar_collector_temp', 'w')
-b = open('/home/pi/sensors/solar_pump_running', 'w')
-c = open('/home/pi/sensors/solar_kwh', 'w')
-d = open('/home/pi/sensors/inside', 'w')
-e = open('/home/pi/sensors/outside', 'w')
-g = open('/home/pi/sensors/boiler', 'w')
-
-f.write(solar_tank_temp)
-a.write(solar_collector_temp)
-b.write(solar_pump_running)
-c.write(solar_kwh)
-d.write(str(indoortemp(temp)))
-e.write(str(outdoortemp(temp)))
-g.write(str(boilertemp(temp)))
 
 # run control script to reflect changes
 
