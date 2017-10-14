@@ -4,10 +4,10 @@ import os.path
 import os
 import subprocess
 import sqlite3
+import re
 
-
-
-
+hotwater_on = None
+hotwater_onehour_jobid = 0
 dbname='/home/pi/database/centralheating.db'
 
 # connection to db. select values from db and hand over variables. 
@@ -23,12 +23,16 @@ conn.close()
 action = sys.argv.pop()
 
 if action == "off" :
-	if hotwater_constant == 1:
-		hotwater_schedule = 0
-		if hotwater_onehour == 1:
-			os.system("gcalcli --calendar 'central heating' --title 'Hotwater extra hour set' --when '" + var + "' --where '.' --duration '60' --description 'end: /usr/bin/python /home/pi/scripts/hotwater_schedule.py extrahouroff' --reminder '1' add")
-	else:
-		hotwater_schedule = 0
+	hotwater_schedule = 0
+	if hotwater_onehour == 1:
+		sched_cmd = ['at', 'now + 1 hour']
+		command = 'python /home/pi/scripts/hotwater_schedule.py extrahouroff'
+		p = subprocess.Popen(sched_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		(stdout, stderr) = p.communicate(command)
+		jobid = re.compile('(\d+)').search(stderr)
+		hotwater_onehour_jobid = jobid.group(0)
+		
+	elif hotwater_constant == 0:
 		hotwater_on = 0
 		
       
@@ -40,17 +44,16 @@ elif action == "on" :
 		hotwater_onehour = 0
 
 elif action == "extrahouroff" :
-	if hotwater_schedule == 1:
+	if not any ((hotwater_schedule, hotwater_constant)):
 		hotwater_onehour = 0
+		hotwater_on = 0
 	
 	else:
 		hotwater_onehour = 0
-		if hotwater_constant == 0:
-			hotwater_on = 0
 			
 conn=sqlite3.connect(dbname)
 curs=conn.cursor()
-curs.execute("UPDATE control SET hotwater_on = ?, hotwater_schedule = ?, hotwater_onehour = ? WHERE rowid = ?", (hotwater_on, hotwater_schedule, hotwater_onehour, 1))
+curs.execute("UPDATE control SET hotwater_on = coalesce(?, hotwater_on), hotwater_schedule = ?, hotwater_onehour = ?, hotwater_onehour_jobid = ? WHERE rowid = ?", (hotwater_on, hotwater_schedule, hotwater_onehour, hotwater_onehour_jobid, 1))
 conn.commit()
 conn.close()			
 os.system("python /home/pi/scripts/control.py")
