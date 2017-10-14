@@ -27,8 +27,8 @@ Before the scripts will run, first install the required software. I will explain
 Once the above software is installed, you simply copy the scripts to your pi's "home" folder, being sure to maintain the folder structure here.
 
 add the following to root crontab:
-
+```
 */2 * * * * python /home/pi/scripts/get_temps_log.py >/dev/null 2>&1
 0 0 1 * * python /home/pi/scripts/db-cleanup.py >/dev/null 2>&1
-
+```
 Execute web.py as root.
