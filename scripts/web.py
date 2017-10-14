@@ -4,9 +4,9 @@ import RPi.GPIO as GPIO
 import time
 import os
 import subprocess
-
+import json
 import sqlite3
-
+import re
 import sys
 from datetime import datetime, date
 app = Flask(__name__)
@@ -38,6 +38,18 @@ def Index():
 	
 	return render_template("index.html")
 	
+@app.route("/data.json")
+def data():
+    connection = sqlite3.connect(dbname)
+    cursor = connection.cursor()
+    cursor.execute("SELECT ttime, outdoortemp FROM temps WHERE tdate>=date('now') ORDER BY ttime")
+    results = cursor.fetchall()
+    
+    return json.dumps(results)
+	
+@app.route("/graph")
+def graph():
+    return render_template("graph.html")	
 	
 def database(figures):
 	conn=sqlite3.connect(dbname)
@@ -102,29 +114,41 @@ def _button():
     conn.close()
     return jsonify(buttonState=state)
 
-# +1 hour for heating. Heating relay is closed and file is created.
+# +1 hour for heating
 @app.route("/_heatingonehour")
 def _heatingonehour():
+    heating_on = None
     state = request.args.get('state')
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
-    for row in curs.execute("SELECT heating_constant, heating_schedule FROM control WHERE rowid=1"):
+    for row in curs.execute("SELECT heating_constant, heating_schedule, heating_onehour_jobid FROM control WHERE rowid=1"):
         heating_constant = row[0]
-        heating_schedule = row[1]	
+        heating_schedule = row[1]
+        heating_onehour_jobid = row[2]		
     conn.close()
     if state=="armed":
-        if heating_constant == 0:
+        if not any ((heating_constant, heating_schedule)): 
             heating_on = 1
             heating_onehour = 1
-            if heating_schedule == 0:
-                os.system("gcalcli --calendar 'central heating' --title 'Heating extra hour set' --when '" + var + "' --where '.' --duration '60' --description 'end: /usr/bin/python /home/pi/scripts/heating_schedule.py extrahouroff' --reminder '1' add")    
+            sched_cmd = ['at', 'now + 1 hour']
+            command = 'python /home/pi/scripts/heating_schedule.py extrahouroff'
+            p = subprocess.Popen(sched_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, stderr) = p.communicate(command)
+            jobid = re.compile('(\d+)').search(stderr)
+            heating_onehour_jobid = jobid.group(0)
+        elif heating_schedule == 1:
+            heating_onehour = 1 			
     elif state=="disarmed":
-        heating_onehour = 0		
-        if heating_schedule == 0:
+        heating_onehour = 0	
+        sched_cmd = ['atrm', str(heating_onehour_jobid)]
+        command = '%s %s '	
+        p = subprocess.Popen(sched_cmd, stdin=subprocess.PIPE)
+        p.communicate(command)		
+        if not any ((heating_constant, heating_schedule)):       
             heating_on = 0
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
-    curs.execute("UPDATE control SET heating_on = ?, heating_onehour = ? WHERE rowid = ?", (heating_on, heating_onehour, 1))
+    curs.execute("UPDATE control SET heating_on = coalesce(?, heating_on), heating_onehour = ?, heating_onehour_jobid = ? WHERE rowid = ?", (heating_on, heating_onehour, heating_onehour_jobid, 1))
     conn.commit()
     conn.close()			
     os.system("python /home/pi/scripts/control.py")
@@ -144,6 +168,7 @@ def _heatingconstant():
     conn.close()
     if state=="armed":
         heating_constant = 1
+        heating_on = 1
         if heating_onehour == 1:
 		    heating_onehour = 0
     elif state=="disarmed":
@@ -239,26 +264,38 @@ def _hotwater():
 # +1 hour for hot water. Hot water relay is closed and file is created.
 @app.route("/_hotwateronehour")
 def _hotwateronehour():
+    hotwater_on = None
     state = request.args.get('state')
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
-    for row in curs.execute("SELECT hotwater_constant, hotwater_schedule FROM control WHERE rowid=1"):
+    for row in curs.execute("SELECT hotwater_constant, hotwater_schedule, hotwater_onehour_jobid FROM control WHERE rowid=1"):
         hotwater_constant = row[0]
-        hotwater_schedule = row[1]	
+        hotwater_schedule = row[1]
+        hotwater_onehour_jobid = row[2]		
     conn.close()
     if state=="armed":
-        if hotwater_constant == 0:
+        if not any ((hotwater_constant, hotwater_schedule)): 
             hotwater_on = 1
             hotwater_onehour = 1
-            if hotwater_schedule == 0:
-                os.system("gcalcli --calendar 'central heating' --title 'Hotwater extra hour set' --when '" + var + "' --where '.' --duration '60' --description 'end: /usr/bin/python /home/pi/scripts/hotwater_schedule.py extrahouroff' --reminder '1' add")      
+            sched_cmd = ['at', 'now + 1 hour']
+            command = 'python /home/pi/scripts/hotwater_schedule.py extrahouroff'
+            p = subprocess.Popen(sched_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            (stdout, stderr) = p.communicate(command)
+            jobid = re.compile('(\d+)').search(stderr)
+            hotwater_onehour_jobid = jobid.group(0)
+        elif hotwater_schedule == 1:
+            hotwater_onehour = 1 	
     elif state=="disarmed":
-        hotwater_onehour = 0		
-        if hotwater_schedule == 0:
+        hotwater_onehour = 0	
+        sched_cmd = ['atrm', str(hotwater_onehour_jobid)]
+        command = '%s %s '	
+        p = subprocess.Popen(sched_cmd, stdin=subprocess.PIPE)
+        p.communicate(command)		
+        if not any ((hotwater_constant, hotwater_schedule)):       
             hotwater_on = 0
     conn=sqlite3.connect(dbname)
     curs=conn.cursor()
-    curs.execute("UPDATE control SET hotwater_on = ?, hotwater_onehour = ? WHERE rowid = ?", (hotwater_on, hotwater_onehour, 1))
+    curs.execute("UPDATE control SET hotwater_on = coalesce(?, hotwater_on), hotwater_onehour = ?, hotwater_onehour_jobid = ? WHERE rowid = ?", (hotwater_on, hotwater_onehour, hotwater_onehour_jobid, 1))
     conn.commit()
     conn.close()				
     os.system("python /home/pi/scripts/control.py")
@@ -278,6 +315,7 @@ def _hotwaterconstant():
     conn.close()
     if state=="armed":
         hotwater_constant = 1
+        hotwater_on = 1
         if hotwater_onehour == 1:
 		    hotwater_onehour = 0
     elif state=="disarmed":
@@ -405,89 +443,57 @@ def _boileroverridebutton():
 	
 ###########################################SENSORS/EXTERNAL################################################	
 	
-# read indoor temperature
+# read variables
 @app.route("/_readtemp")
 def _readtemp():
-    if database(figures)[1] < 14:
-        readindoortemp = """
-        <font color = "blue">%s</font>
-        """ %(database(figures)[1])
-    else:
-        readindoortemp = database(figures)[1]
-    if database(figures)[0] < 14:
-            readoutdoortemp = """
-        <font color = "blue">%s</font>
-        """ %(database(figures)[0])
-    else: 
-        readoutdoortemp = database(figures)[0] 
-    if database(figures)[2] < 35:
-        readboilertemp = """
-        <font color = "blue">%s</font>
-        """ %(database(figures)[2])
-    else:
-        readboilertemp = database(figures)[2]	
-    return jsonify(readindoortemp=readindoortemp, readoutdoortemp=readoutdoortemp, readboilertemp=readboilertemp)	
-	
-
-# read solar kwh
-@app.route("/_readsolarkwh")
-def _readsolarkwh():
-    readsolarkwh = database(figures)[4] - database(figures)[6]
-        		
-    return jsonify(readsolarkwh=readsolarkwh)
-	
-# boiler temp increasing/decreasing
-@app.route("/_boilertemprate")
-def _boilertemprate():
-	if database(figures)[5]/6 >= database(figures)[2]+0.2: 
+	pumprunningbool = database(figures)[3]
+	if database(figures)[1] < 14:
+		readindoortemp = """
+		<font color = "blue">%s</font>
+		""" %(database(figures)[1])
+	else:
+		readindoortemp = database(figures)[1]
+	if database(figures)[0] < 14:
+			readoutdoortemp = """
+		<font color = "blue">%s</font>
+		""" %(database(figures)[0])
+	else: 
+		readoutdoortemp = database(figures)[0] 
+	if database(figures)[2] < 35:
+		readboilertemp = """
+		<font color = "blue">%s</font>
+		""" %(database(figures)[2])
+	else:
+		readboilertemp = database(figures)[2]	
+	readsolarkwh = database(figures)[4] - database(figures)[6]
+	if database(figures)[5]/6 >= database(figures)[2]+0.3: 
 		boilertemprate='<img src="/static/down_arrow.png" width="20" height="20" />'
-	elif database(figures)[5]/6 <= database(figures)[2]-0.2:
+	elif database(figures)[5]/6 <= database(figures)[2]-0.3:
 		boilertemprate='<img src="/static/up_arrow.png" width="20" height="20" />'
 	else:
 		boilertemprate='--'
-	return jsonify(boilertemprate=boilertemprate)
-
-	# boiler status
-@app.route("/_boilerstatus")
-def _boilerstatus():
-    if GPIO.input(24) == GPIO.input(23) == True:
-        boilerstatus='<img src="/static/boiler_off.png" width="100" height="100" />'
-    else:
-        boilerstatus='<img src="/static/boiler_on.png" width="100" height="100" />'
-    return jsonify(boilerstatus=boilerstatus)
+	if GPIO.input(24) == GPIO.input(23) == True:
+		boilerstatus='<img src="/static/boiler_off.png" width="100" height="100" />'
+	else:
+		boilerstatus='<img src="/static/boiler_on.png" width="100" height="100" />'
+	if bool(pumprunningbool) == True:
+			solarstatus='<img src="/static/solarpump_on.png" width="100" height="100" />'
+	else:
+			solarstatus='<img src="/static/solarpump_off.png" width="100" height="100" />'
+	if database(figures)[7] == 1:
+		heatingscheduleindicator='<img src="/static/schedule_on.png" width="30" height="30" />'
+	else:
+		heatingscheduleindicator='<img src="/static/schedule_off.png" width="30" height="30" />'
+	if database(figures)[8] == 1:
+		waterscheduleindicator='<img src="/static/schedule_on.png" width="30" height="30" />'
+	else:
+		waterscheduleindicator='<img src="/static/schedule_off.png" width="30" height="30" />'
+	return jsonify(readindoortemp=readindoortemp, readoutdoortemp=readoutdoortemp, readboilertemp=readboilertemp, readsolarkwh=readsolarkwh, boilertemprate=boilertemprate, boilerstatus=boilerstatus, solarstatus=solarstatus, heatingscheduleindicator=heatingscheduleindicator, waterscheduleindicator=waterscheduleindicator)	
 	
-# solar status
-@app.route("/_solarstatus")
-def _solarstatus():
-    pumprunningbool = database(figures)[3]
-    if bool(pumprunningbool) == True:
-            solarstatus='<img src="/static/solarpump_on.png" width="100" height="100" />'
-    else:
-            solarstatus='<img src="/static/solarpump_off.png" width="100" height="100" />'
-    return jsonify(solarstatus=solarstatus)
-	
-# heating schedule indicator
-@app.route("/_heatingscheduleindicator")
-def _heatingscheduleindicator():
-    if database(figures)[7] == 1:
-#    if os.path.isfile("/home/pi/schedule/heating_schedule_on") == True:
-        heatingscheduleindicator='<img src="/static/schedule_on.png" width="30" height="30" />'
-    else:
-        heatingscheduleindicator='<img src="/static/schedule_off.png" width="30" height="30" />'
-    return jsonify(heatingscheduleindicator=heatingscheduleindicator)
-
-# water schedule indicator
-@app.route("/_waterscheduleindicator")
-def _waterscheduleindicator():
-    if database(figures)[8] == 1:
-#    if os.path.isfile("/home/pi/schedule/hotwater_schedule_on") == True:
-        waterscheduleindicator='<img src="/static/schedule_on.png" width="30" height="30" />'
-    else:
-        waterscheduleindicator='<img src="/static/schedule_off.png" width="30" height="30" />'
-    return jsonify(waterscheduleindicator=waterscheduleindicator)	
 
 	
 # run the webserver on standard port 80, requires sudo
 if __name__ == "__main__":
     
-    app.run(host='0.0.0.0', port=80, debug=False, threaded=True)
+    app.run(host='0.0.0.0', port=80, debug=True, threaded=True)
+
