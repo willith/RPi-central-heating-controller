@@ -4,8 +4,8 @@ import sqlite3
 from datetime import datetime, date
 import dateutil.relativedelta
 now = date.today()
-date = now + dateutil.relativedelta.relativedelta(months=-1)
-copyfile("/home/pi/database/centralheating.db", "/home/pi/database/archive/centralheating-%s.db" % date)
+date2 = now + dateutil.relativedelta.relativedelta(months=-1)
+copyfile("/home/pi/database/centralheating.db", "/home/pi/database/archive/centralheating-%s.db" % date2)
 
 conn=sqlite3.connect('/home/pi/database/centralheating.db')
 
